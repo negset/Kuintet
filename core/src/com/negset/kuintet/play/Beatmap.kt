@@ -2,23 +2,24 @@ package com.negset.kuintet.play
 
 import com.badlogic.gdx.files.FileHandle
 import com.moandjiezana.toml.Toml
-import com.negset.kuintet.play.Cmd.Key.*
+import com.negset.kuintet.play.CmdProp.Key.*
 
 class Beatmap(file: FileHandle)
 {
     val data = Toml().read(file.read()).to(BeatmapData::class.java)
 
-    fun parse(dif: Difficulty): List<ChartElm>
+    fun parse(dif: Difficulty): List<ElmProp>
     {
         val lines = data.getChart(dif)
                 .split(Regex("\\n"))
                 .map { it.split("#")[0].trim() }
                 .filter { it.isNotBlank() }
 
-        val elms = mutableListOf<ChartElm>()
+        val props = mutableListOf<ElmProp?>()
+        val indices = mutableListOf<ElmIdx>()
+        val unitCounts = mutableListOf<Int>()
         var msrIdx = 0
         var unitIdx = 0
-        val unitPerMsr = mutableListOf<Int>()
         for (line in lines)
         {
             when
@@ -26,8 +27,8 @@ class Beatmap(file: FileHandle)
                 // 命令行
                 line.matches(Regex("\\\$.+")) ->
                 {
-                    val prop = ElmProp(msrIdx, unitIdx)
-                    elms.add(Cmd.from(prop, line))
+                    props.add(CmdProp.from(line))
+                    indices.add(ElmIdx(msrIdx, unitIdx))
                 }
 
                 // 小節行
@@ -36,16 +37,16 @@ class Beatmap(file: FileHandle)
                     val units = line.dropLast(1).split(Regex("\\s*,\\s*"))
                     for (unit in units)
                     {
-                        val prop = ElmProp(msrIdx, unitIdx)
                         if (unit.isEmpty())
-                            elms.add(Rest(prop))
+                            props.add(null)
                         else
-                            elms.add(Note.from(prop, unit))
+                            props.add(NoteProp.from(unit))
+                        indices.add(ElmIdx(msrIdx, unitIdx))
                         unitIdx++
                     }
                     if (line.endsWith(';'))
                     {
-                        unitPerMsr.add(unitIdx)
+                        unitCounts.add(unitIdx)
                         unitIdx = 0
                         msrIdx++
                     }
@@ -53,32 +54,30 @@ class Beatmap(file: FileHandle)
             }
         }
 
-        calcTiming(elms, unitPerMsr)
+        calcTiming(props, indices, unitCounts)
 
-        return elms.filter { it !is Rest }
+        return props.filterNotNull()
     }
 
-    private fun calcTiming(elms: MutableList<ChartElm>,
-                           unitPerMsr: MutableList<Int>)
+    private fun calcTiming(props: List<ElmProp?>,
+                           indices: List<ElmIdx>,
+                           unitCounts: List<Int>)
     {
         var bpm = data.bpm
         var timer = 0f          /* [ms] */
-        for (elm in elms)
+        for ((i, prop) in props.withIndex())
         {
-            when (elm)
+            when (prop)
             {
-                is Cmd ->
+                is CmdProp -> when (prop.key)
                 {
-                    when (elm.key)
-                    {
-                        BPM -> bpm = elm.value.toFloat()
-                        DELAY -> timer += elm.value.toFloat() * 1000
-                    }
+                    BPM -> bpm = prop.value.toFloat()
+                    DELAY -> timer += prop.value.toFloat() * 1000
                 }
             }
 
-            elm.prop.timing = timer.toLong()
-            timer += 240000 / bpm / unitPerMsr[elm.prop.msrIdx]
+            prop?.timing = timer.toLong()
+            timer += 240000 / bpm / unitCounts[indices[i].msrIdx]
         }
     }
 }
@@ -112,22 +111,19 @@ data class BeatmapData(val title: String,
     }
 }
 
-interface ChartElm
+interface ElmProp
 {
-    val prop: ElmProp
+    var timing: Long
 }
 
-data class ElmProp(val msrIdx: Int,
-                   val unitIdx: Int,
-                   var timing: Long = 0L)
+data class ElmIdx(val msrIdx: Int,
+                  val unitIdx: Int)
 
-class Rest(override val prop: ElmProp) : ChartElm
-
-data class Note(override val prop: ElmProp,
-                val type: Type,
-                val pos: Int,
-                val color: Color,
-                val color2: Color? = null) : ChartElm
+data class NoteProp(val type: Type,
+                    val pos: Int,
+                    val color: Color,
+                    val color2: Color? = null,
+                    override var timing: Long = 0L) : ElmProp
 {
     enum class Type
     {
@@ -141,7 +137,7 @@ data class Note(override val prop: ElmProp,
 
     companion object
     {
-        fun from(prop: ElmProp, s: String): Note
+        fun from(s: String): NoteProp
         {
             val sp = s.chunked(1)
             return when
@@ -150,14 +146,14 @@ data class Note(override val prop: ElmProp,
                 s.matches(Regex("[bgpry]\\d")) ->
                 {
                     val c1 = Color.valueOf(sp[0].toUpperCase())
-                    Note(prop, Type.TAP, sp[1].toInt(), c1)
+                    NoteProp(Type.TAP, sp[1].toInt(), c1)
                 }
                 // FLICK
                 s.matches(Regex("[bgpry][bgpry]\\d")) ->
                 {
                     val c1 = Color.valueOf(sp[0].toUpperCase())
                     val c2 = Color.valueOf(sp[1].toUpperCase())
-                    Note(prop, Type.FLICK, sp[2].toInt(), c1, c2)
+                    NoteProp(Type.FLICK, sp[2].toInt(), c1, c2)
                 }
                 else -> throw IllegalArgumentException("不正なノーツ文字列: $s")
             }
@@ -165,9 +161,9 @@ data class Note(override val prop: ElmProp,
     }
 }
 
-data class Cmd(override val prop: ElmProp,
-               val key: Key,
-               val value: String) : ChartElm
+data class CmdProp(val key: Key,
+                   val value: String,
+                   override var timing: Long = 0L) : ElmProp
 {
     enum class Key
     {
@@ -176,10 +172,10 @@ data class Cmd(override val prop: ElmProp,
 
     companion object
     {
-        fun from(prop: ElmProp, s: String): Cmd
+        fun from(s: String): CmdProp
         {
             val sp = s.drop(1).split(Regex("\\s*=\\s*"))
-            return Cmd(prop, valueOf(sp[0].toUpperCase()), sp[1])
+            return CmdProp(valueOf(sp[0].toUpperCase()), sp[1])
         }
     }
 }
