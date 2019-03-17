@@ -1,4 +1,4 @@
-package com.negset.kuintet.play
+package com.negset.kuintet.play.scene2d
 
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.Matrix4
@@ -8,8 +8,8 @@ class Course : Group()
 {
     private val projectionMatrix = Matrix4()
 
-    var xAxisRotation = -0.7f
-    private var perspective = -1f / 10f
+    private val xAxisRotation = -0.7f
+    private val perspective = -0.1f
 
     override fun draw(batch: Batch, parentAlpha: Float)
     {
