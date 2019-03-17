@@ -14,7 +14,8 @@ enum class Textures
     NOTE_Y,
     BUTTONS,
     COURSE_BG,
-    COURSE_BAR;
+    COURSE_BAR,
+    MSR_LINE;
 
     private val path = "${name.toLowerCase()}.png"
 

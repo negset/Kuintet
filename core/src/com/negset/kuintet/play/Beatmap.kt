@@ -34,6 +34,13 @@ class Beatmap(file: FileHandle)
                 // 小節行
                 line.matches(Regex(".*[,;]")) ->
                 {
+                    // 小節線
+                    if (unitIdx == 0)
+                    {
+                        props.add(MsrLineProp())
+                        indices.add(ElmIdx(msrIdx, unitIdx))
+                    }
+
                     val units = line.dropLast(1).split(Regex("\\s*,\\s*"))
                     for (unit in units)
                     {
@@ -65,8 +72,14 @@ class Beatmap(file: FileHandle)
     {
         var bpm = data.bpm
         var timer = 0f          /* [ms] */
+        var lastIdx = indices[0]
         for ((i, prop) in props.withIndex())
         {
+            if (indices[i] != lastIdx)
+            {
+                timer += 240000 / bpm / unitCounts[indices[i].msrIdx]
+            }
+
             when (prop)
             {
                 is CmdProp -> when (prop.key)
@@ -77,7 +90,7 @@ class Beatmap(file: FileHandle)
             }
 
             prop?.timing = timer.toLong()
-            timer += 240000 / bpm / unitCounts[indices[i].msrIdx]
+            lastIdx = indices[i]
         }
     }
 }
@@ -118,6 +131,8 @@ interface ElmProp
 
 data class ElmIdx(val msrIdx: Int,
                   val unitIdx: Int)
+
+data class MsrLineProp(override var timing: Long = 0L) : ElmProp
 
 data class NoteProp(val type: Type,
                     val pos: Int,

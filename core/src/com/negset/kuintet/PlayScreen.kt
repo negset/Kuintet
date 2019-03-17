@@ -7,8 +7,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.negset.kuintet.play.*
 import com.negset.kuintet.play.Textures.*
+import com.negset.kuintet.play.scene2d.Course
+import com.negset.kuintet.play.scene2d.MsrLine
 import com.negset.kuintet.play.scene2d.Note
-import ktx.actors.contains
+import ktx.actors.isShown
 import ktx.actors.plusAssign
 import ktx.assets.file
 import ktx.assets.getValue
@@ -32,8 +34,11 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
 
     private val beatmap = Beatmap(file("beatmap.toml"))
     private val props = beatmap.parse(Difficulty.EASY).toMutableList()
+
     private val activeNotes = mutableListOf<Note>()
     private val notePool = pool { Note() }
+    private val activeMsrLine = mutableListOf<MsrLine>()
+    private val msrLinePool = pool { MsrLine() }
 
     private val sw = Stopwatch()
 
@@ -48,6 +53,7 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
         BUTTONS.load()
         COURSE_BAR.load()
         COURSE_BG.load()
+        MSR_LINE.load()
     }
 
     override fun onFinishLoading()
@@ -62,6 +68,7 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
         courseBar = Image(COURSE_BAR().filtered()).apply {
             x = 10f
             y = 50f
+            width = 700f
         }
 
         course += courseBg
@@ -82,21 +89,26 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
 
     override fun update(delta: Float)
     {
-        if (props.isNotEmpty() && sw.elapsed >= props[0].timing)
+        while (props.isNotEmpty() && sw.elapsed >= props[0].timing)
         {
             when (props[0])
             {
+                is MsrLineProp -> msrLinePool().run {
+                    init(props[0] as MsrLineProp)
+                    activeMsrLine.add(this)
+                    course += this
+                }
+
                 is NoteProp -> notePool().run {
                     init(props[0] as NoteProp)
                     activeNotes.add(this)
                     course += this
                 }
             }
-
             props.removeAt(0)
         }
 
-        removeNote()
+        removeDisables()
 
         stage.act(delta)
 
@@ -105,16 +117,24 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
             game.setScreen<SelectScreen>()
     }
 
-    private fun removeNote()
+    private fun removeDisables()
     {
-        val last = activeNotes.size - 1
-        for (i in last downTo 0)
+        for (i in activeNotes.size - 1 downTo 0)
         {
             val item = activeNotes[i]
-            if (item !in course)
+            if (!item.isShown())
             {
                 activeNotes.removeAt(i)
                 notePool(item)
+            }
+        }
+        for (i in activeMsrLine.size - 1 downTo 0)
+        {
+            val item = activeMsrLine[i]
+            if (!item.isShown())
+            {
+                activeMsrLine.removeAt(i)
+                msrLinePool(item)
             }
         }
     }
@@ -139,5 +159,6 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
         BUTTONS.unload()
         COURSE_BAR.unload()
         COURSE_BG.unload()
+        MSR_LINE.unload()
     }
 }
