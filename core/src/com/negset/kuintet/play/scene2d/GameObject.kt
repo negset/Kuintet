@@ -20,7 +20,7 @@ open class GameObject : Actor(), Pool.Poolable
     override fun draw(batch: Batch?, parentAlpha: Float)
     {
         batch?.setColor(color.r, color.g, color.b, color.a * parentAlpha)
-        batch?.draw(texture, x - width / 2, y - height / 2)
+        batch?.draw(texture, x - width / 2, y - height / 2, width, height)
     }
 
     override fun reset()
