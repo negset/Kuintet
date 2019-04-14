@@ -136,18 +136,12 @@ data class MsrLineProp(override var timing: Long = 0L) : ElmProp
 
 data class NoteProp(val type: Type,
                     val pos: Int,
-                    val color: Color,
-                    val color2: Color? = null,
+                    val pos2: Int = 0,
                     override var timing: Long = 0L) : ElmProp
 {
     enum class Type
     {
         TAP, FLICK, HOLD, SLIDE;
-    }
-
-    enum class Color
-    {
-        B, G, P, R, Y;
     }
 
     companion object
@@ -158,17 +152,14 @@ data class NoteProp(val type: Type,
             return when
             {
                 // TAP
-                s.matches(Regex("[bgpry]\\d")) ->
+                s.matches(Regex("[12345]")) ->
                 {
-                    val c1 = Color.valueOf(sp[0].toUpperCase())
-                    NoteProp(Type.TAP, sp[1].toInt(), c1)
+                    NoteProp(Type.TAP, sp[0].toInt())
                 }
                 // FLICK
-                s.matches(Regex("[bgpry][bgpry]\\d")) ->
+                s.matches(Regex("[12345][12345]")) ->
                 {
-                    val c1 = Color.valueOf(sp[0].toUpperCase())
-                    val c2 = Color.valueOf(sp[1].toUpperCase())
-                    NoteProp(Type.FLICK, sp[2].toInt(), c1, c2)
+                    NoteProp(Type.FLICK, sp[0].toInt(), sp[1].toInt())
                 }
                 else -> throw IllegalArgumentException("不正なノーツ文字列: $s")
             }

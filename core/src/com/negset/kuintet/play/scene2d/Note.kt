@@ -7,18 +7,19 @@ class Note : GameObject()
 {
     companion object
     {
-        val posX = floatArrayOf(111f, 207f, 302f, 398f, 493f, 589f)
+        val posX = floatArrayOf(128f, 244f, 360f, 476f, 592f)
     }
 
     fun init(prop: NoteProp)
     {
-        texture = when (prop.color)
+        texture = when (prop.pos)
         {
-            NoteProp.Color.B -> NOTE_B()
-            NoteProp.Color.G -> NOTE_G()
-            NoteProp.Color.P -> NOTE_P()
-            NoteProp.Color.R -> NOTE_R()
-            NoteProp.Color.Y -> NOTE_Y()
+            1 -> NOTE_Y()
+            2 -> NOTE_P()
+            3 -> NOTE_R()
+            4 -> NOTE_B()
+            5 -> NOTE_G()
+            else -> null
         }
 
         x = posX[prop.pos - 1]
