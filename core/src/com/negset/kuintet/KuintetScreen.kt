@@ -10,7 +10,8 @@ abstract class KuintetScreen(protected val game: Kuintet) : KtxScreen
     {
         if (loading)
         {
-            loading()
+            drawLoading()
+            updateLoading()
             if (game.assetMgr.update())
             {
                 onFinishLoading()
@@ -24,7 +25,9 @@ abstract class KuintetScreen(protected val game: Kuintet) : KtxScreen
         }
     }
 
-    abstract fun loading()
+    abstract fun drawLoading()
+
+    abstract fun updateLoading()
 
     abstract fun onFinishLoading()
 
