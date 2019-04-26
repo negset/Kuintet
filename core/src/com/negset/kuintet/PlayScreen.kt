@@ -26,7 +26,8 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
     private lateinit var buttons: Image
 
     private val beatmap = Beatmap(file("beatmap.toml"))
-    private val props = beatmap.parse(Difficulty.EASY).toMutableList()
+    private val props = beatmap.parse(Difficulty.EASY)
+    private var index = 0
 
     private val objectsMgr = ObjectsMgr(course)
 
@@ -73,12 +74,16 @@ class PlayScreen(game: Kuintet) : KuintetScreen(game)
 
     override fun update(delta: Float)
     {
-        while (props.isNotEmpty() && sw.elapsed >= props[0].timing)
+        while (true)
         {
-            objectsMgr.createFromProp(props[0])
-            props.removeAt(0)
+            val prop = props.getOrNull(index) ?: break
+            if (sw.elapsed >= prop.timing)
+            {
+                objectsMgr.createFromProp(prop)
+                index++
+            }
+            else break
         }
-
         stage.act(delta)
 
         if (Gdx.input.justTouched() &&
