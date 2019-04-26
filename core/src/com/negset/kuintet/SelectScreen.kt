@@ -16,6 +16,21 @@ class SelectScreen(game: Kuintet) : KuintetScreen(game)
 
     private val stage = Stage(FitViewport(WIDTH, HEIGHT))
 
+    override fun drawLoading()
+    {
+        stage.batch.use {
+            defaultFont.draw(it, "drawLoading...", 100f, 100f)
+        }
+    }
+
+    override fun updateLoading()
+    {
+    }
+
+    override fun onFinishLoading()
+    {
+    }
+
     override fun draw()
     {
         stage.draw()
@@ -29,17 +44,6 @@ class SelectScreen(game: Kuintet) : KuintetScreen(game)
         stage.act(delta)
         if (Gdx.input.justTouched())
             game.setScreen<PlayScreen>()
-    }
-
-    override fun loading()
-    {
-        stage.batch.use {
-            defaultFont.draw(it, "loading...", 100f, 100f)
-        }
-    }
-
-    override fun onFinishLoading()
-    {
     }
 
     override fun resize(width: Int, height: Int)
